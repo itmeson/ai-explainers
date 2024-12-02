@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Visualization with Slider</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Developing a medical diagnostic</h1>
+
+        <div class="slider-container">
+            <label for="data-slider">Adjust the slider to pick the best cutoff between those who have and those who don't have the disease:</label>
+            <input type="range" id="data-slider" min="0" max="100" value="50" oninput="updateChart(this.value)">
+        </div>
+
+        <canvas id="chart" width="400" height="200"></canvas>
+        <button id="loadMore" class="spaced">Load More Data</button>
+
+        <div id="classification-container" class="spaced" style="display: none;">
+            <label for="classification-rule">Classify as having the disease:</label>
+            <select id="classification-rule" class="spaced">
+                <option value="less">Less than or equal to the cutoff</option>
+                <option value="greater">Greater than the cutoff</option>
+            </select>
+            <button id="calculate-matrix" class="spaced">Calculate Confusion Matrix</button>
+        </div>
+
+        <div id="confusion-matrix" class="spaced" style="display: none;">
+            <h2>Confusion Matrix</h2>
+            <div class="matrix">
+                <div></div>
+                <div>Actual Positive</div>
+                <div>Actual Negative</div>
+                <div>Predicted Positive</div>
+                <div id="tp-count"></div>
+                <div id="fp-count"></div>
+                <div>Predicted Negative</div>
+                <div id="fn-count"></div>
+                <div id="tn-count"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
