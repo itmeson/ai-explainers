@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let chart;
+let whichCellClicked = null;
 
 function updateChart(value) {
     // Placeholder function to update chart based on slider value
@@ -158,13 +159,38 @@ function loadDataset() {
 
     const matrixCells = document.querySelectorAll('.matrix div');
     matrixCells.forEach(cell => {
+        //cellDiv = document.getElementById(cell.id);
         cell.addEventListener('click', function(event) {
+            // If the cell is already clicked, reset it
+            if (cell.clicked) {
+                cell.style.backgroundColor = 'white';
+                cell.clicked = false;
+                resetPoints();
+                whichCellClicked = null;
+            } else {
+                // Reset all cells
+                matrixCells.forEach(c => {
+                    c.style.backgroundColor = 'white';
+                    c.clicked = false;
+                    resetPoints();
+                });
+
+                // Highlight the clicked cell
+                if (['tp-count', 'tn-count', 'fn-count', 'fp-count'].includes(cell.id)) {
+                    cell.style.backgroundColor = 'red';
+                    cell.clicked = true;
+                    whichCellClicked = cell;
+                    highlightPoints(cell.id);
+                }
+            }
+            });
+
+        cell.addEventListener('mouseover', function(event) {
             showTooltip(event, cell);
-            highlightPoints(cell.id);
-        });
+        })
+
         cell.addEventListener('mouseleave', function() {
             hideTooltip();
-            resetPoints();
         });
     });
 };
@@ -236,7 +262,7 @@ function highlightPoints(id) {
                 dataset.pointBackgroundColor = dataset.pointBackgroundColor || []; // Ensure property exists
 
                 // Set point-specific styles by directly accessing the dataset properties
-                dataset.pointBackgroundColor[pointIndex] = 'red'; // Change to black color for highlighting
+                dataset.pointBackgroundColor[pointIndex] = 'red'; // Change to red color for highlighting
                 dataset.pointRadius = dataset.pointRadius || []; // Ensure array exists
                 dataset.pointRadius[pointIndex] = 20;  // Increase point size
             } else {
@@ -254,10 +280,13 @@ function highlightPoints(id) {
 }
 
 function resetPoints() {
-    chart.data.datasets.forEach(dataset => {
-        dataset.data.forEach(point => {
-            point.highlight = false;  // Reset highlight property to false
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+        dataset.data.forEach((point, pointIndex) => {
+            dataset.pointBackgroundColor = dataset.pointBackgroundColor || [];
+            dataset.pointBackgroundColor[pointIndex] = dataset.backgroundColor; // Set to default dataset color
+            dataset.pointRadius = dataset.pointRadius || [];
+            dataset.pointRadius[pointIndex] = 6;  // Reset to default size        });
         });
-    });
+    })
     chart.update();
 }
