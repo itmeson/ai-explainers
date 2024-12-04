@@ -12,7 +12,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Developing a medical diagnostic</h1>
+        <h1>Training a medical diagnostic</h1>
 
         <div class="slider-container">
             <label for="data-slider">Adjust the slider to pick the best cutoff between those who have and those who don't have the disease:</label>
@@ -44,7 +44,37 @@
                 <div id="fn-count" clicked="false"></div>
                 <div id="tn-count" clicked="false"></div>
             </div>
+            <div id="cutoff-instructions" class="spaced">
+                <p>Confrim that you are satisfied by this cutoff by investigating the different groups where the diagnosis was correct and where it was wrong.  If you decide to change the cutoff, click the "Calculate" button again to recalculate the confusin matrix. Make sure you are considering what this tradeoff might mean for a real patient.
+                </p>
+                <p>When you've decided you have the best possible cutoff, click the "Confirm cutoff" button below to lock it in</p>
+                <button id="confirm-cutoff" class="spaced">Confirm cutoff</button>
+            </div>
         </div>
+
+        <div id="testing-container" class="spaced" style="display: none;">
+            <hr>
+            <h2>Testing</h2>
+            <canvas id="test-chart" width="400" height="200"></canvas>
+            <button id="loadMoreTest" class="spaced">Load More Test Data</button>
+        
+            <div id="test-confusion-matrix" class="spaced">
+                <h2>Confusion Matrix</h2>
+                <div class="matrix">
+                    <div></div>
+                    <div>Actual Positive</div>
+                    <div>Actual Negative</div>
+                    <div>Predicted Positive</div>
+                    <div id="test-tp-count"></div>
+                    <div id="test-fp-count"></div>
+                    <div>Predicted Negative</div>
+                    <div id="test-fn-count"></div>
+                    <div id="test-tn-count"></div>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
     <script src="script.js"></script>

@@ -28,6 +28,7 @@ function loadDataset() {
 
             // Extract data points
             const allData = [];
+            const testData = [];
 
             data.forEach(record => {
                 const xValue = parseFloat(record.diagnostic_value);
@@ -43,6 +44,7 @@ function loadDataset() {
                 };
 
                 allData.push(point);
+                testData.push(point);
             });
 
             // Set up the chart with empty datasets
@@ -54,15 +56,15 @@ function loadDataset() {
                         {
                             label: 'Does Not Have Disease',
                             data: [],
-                            backgroundColor: 'rgba(255, 205, 86, 0.7)', // Yellow
+                            backgroundColor: 'rgba(255, 205, 86, 0.3)', // Yellow
                             pointRadius: 6,
                             pointStyle: 'circle' // Yellow circles
                         },
                         {
                             label: 'Has Disease',
                             data: [],
-                            backgroundColor: 'rgba(153, 102, 255, 0.7)', // Purple
-                            pointRadius: 6,
+                            backgroundColor: 'rgba(153, 102, 255, 0.6)', // Purple
+                            pointRadius: 8,
                             pointStyle: 'triangle' // Purple spikes
                         }
                     ]
@@ -116,6 +118,78 @@ function loadDataset() {
                 }
             });
 
+            // Set up the testing chart with empty datasets
+            const testCtx = document.getElementById('test-chart').getContext('2d');
+            testChart = new Chart(testCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Does Not Have Disease',
+                            data: [],
+                            backgroundColor: 'rgba(255, 205, 86, 0.3)', // Yellow
+                            pointRadius: 6,
+                            pointStyle: 'circle' // Yellow circles
+                        },
+                        {
+                            label: 'Has Disease',
+                            data: [],
+                            backgroundColor: 'rgba(153, 102, 255, 0.6)', // Purple
+                            pointRadius: 8,
+                            pointStyle: 'triangle' // Purple spikes
+                        }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw; // Access the original data point object
+                                    return `${point.name}, ${point.status}, ${point.x.toFixed(1)}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    xMin: 50, // Initial value
+                                    xMax: 50, // Initial value
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    label: {
+                                        enabled: true,
+                                        content: 'Cutoff',
+                                        position: 'start'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Diagnostic Value'
+                            },
+                            min: 0,
+                            max: 100
+                        },
+                        y: {
+                            display: false // Hide y-axis since it's not relevant
+                        }
+                    }
+                }
+            });
+    
+
             let currentIndex = 0;
             const maxPoints = 20;
             const loadMoreData = () => {
@@ -143,7 +217,27 @@ function loadDataset() {
                 }
             };
 
+            
+            let testCurrentIndex = 0;
+            const loadMoreTestData = () => {
+                const nextIndex = testCurrentIndex + 10;
+                const newData = testData.slice(testCurrentIndex, nextIndex);
+
+                const newHasDisease = newData.filter(point => point.status === "has");
+                const newDoesNotHaveDisease = newData.filter(point => point.status === "doesn't");
+
+                testChart.data.datasets[0].data.push(...newDoesNotHaveDisease);
+                testChart.data.datasets[1].data.push(...newHasDisease);
+                testChart.update();
+
+                testCurrentIndex = nextIndex;
+
+                calculateTestConfusionMatrix();
+            };
+
             document.getElementById('loadMore').addEventListener('click', loadMoreData);
+            document.getElementById('loadMoreTest').addEventListener('click', loadMoreTestData);
+
         }
     });
 
@@ -165,22 +259,26 @@ function loadDataset() {
             if (cell.clicked) {
                 cell.style.backgroundColor = 'white';
                 cell.clicked = false;
-                resetPoints();
+                resetPoints(cell.id);
                 whichCellClicked = null;
             } else {
                 // Reset all cells
                 matrixCells.forEach(c => {
                     c.style.backgroundColor = 'white';
                     c.clicked = false;
-                    resetPoints();
+                    resetPoints(cell.id);
                 });
 
                 // Highlight the clicked cell
-                if (['tp-count', 'tn-count', 'fn-count', 'fp-count'].includes(cell.id)) {
+                if (cell.id.includes('count')) {
                     cell.style.backgroundColor = 'red';
                     cell.clicked = true;
                     whichCellClicked = cell;
-                    highlightPoints(cell.id);
+                    if (cell.id.includes('test')) {
+                        highlightPoints(cell.id, testChart);
+                    }else {
+                        highlightPoints(cell.id, chart);
+                    }
                 }
             }
             });
@@ -192,6 +290,22 @@ function loadDataset() {
         cell.addEventListener('mouseleave', function() {
             hideTooltip();
         });
+    });
+
+    document.getElementById('confirm-cutoff').addEventListener('click', function() {
+        // Deactivate the cutoff slider
+        document.getElementById('data-slider').disabled = true;
+    
+        // Reveal the next section of the page
+        document.getElementById('testing-container').style.display = 'block';
+
+        // Set the cutoff line in the test chart
+        const cutoff = parseFloat(document.getElementById('data-slider').value);
+        testChart.options.plugins.annotation.annotations.line1.xMin = cutoff;
+        testChart.options.plugins.annotation.annotations.line1.xMax = cutoff;
+        testChart.options.plugins.annotation.annotations.line1.label.content = `Cutoff: ${cutoff}`;
+
+        testChart.update();
     });
 };
 
@@ -208,6 +322,21 @@ function calculateConfusionMatrix(cutoff, rule) {
     document.getElementById('fn-count').textContent = fn;
 
     document.getElementById('confusion-matrix').style.display = 'block';
+}
+
+function calculateTestConfusionMatrix() {
+    const cutoff = parseFloat(document.getElementById('data-slider').value);
+    const rule = document.getElementById('classification-rule').value;
+
+    const tp = testChart.data.datasets[1].data.filter(point => (rule === 'less' ? point.x <= cutoff : point.x > cutoff)).length;
+    const tn = testChart.data.datasets[0].data.filter(point => (rule === 'less' ? point.x > cutoff : point.x <= cutoff)).length;
+    const fp = testChart.data.datasets[0].data.filter(point => (rule === 'less' ? point.x <= cutoff : point.x > cutoff)).length;
+    const fn = testChart.data.datasets[1].data.filter(point => (rule === 'less' ? point.x > cutoff : point.x <= cutoff)).length;
+
+    document.getElementById('test-tp-count').textContent = tp;
+    document.getElementById('test-tn-count').textContent = tn;
+    document.getElementById('test-fp-count').textContent = fp;
+    document.getElementById('test-fn-count').textContent = fn;
 }
 
 function showTooltip(event, cell) {
@@ -228,26 +357,29 @@ function hideTooltip() {
 }
 
 function getTooltipText(id) {
-    console.log(id, id.includes('tp'))
     switch (id) {
         case 'tp-count':
+        case 'test-tp-count':
             return 'True Positives (TP): Correctly identified as having the disease.';
         case 'tn-count':
+        case 'test-tn-count':
             return 'True Negatives (TN): Correctly identified as not having the disease.';
         case 'fp-count':
+        case 'test-fp-count':
             return 'False Positives (FP): Incorrectly identified as having the disease.';
         case 'fn-count':
+        case 'test-fn-count':
             return 'False Negatives (FN): Incorrectly identified as not having the disease.';
         default:
             return '';
     }
 }
 
-function highlightPoints(id) {
+function highlightPoints(id, chartId) {
     const cutoff = parseFloat(document.getElementById('data-slider').value);
     const rule = document.getElementById('classification-rule').value;
 
-    chart.data.datasets.forEach((dataset, datasetIndex) => {
+    chartId.data.datasets.forEach((dataset, datasetIndex) => {
         dataset.data.forEach((point, pointIndex) => {
             const isPositive = rule === 'less' ? point.x <= cutoff : point.x > cutoff;
             const isHighlighted = (id.includes('tp') && datasetIndex === 1 && isPositive) ||
@@ -262,7 +394,7 @@ function highlightPoints(id) {
                 dataset.pointBackgroundColor = dataset.pointBackgroundColor || []; // Ensure property exists
 
                 // Set point-specific styles by directly accessing the dataset properties
-                dataset.pointBackgroundColor[pointIndex] = 'red'; // Change to red color for highlighting
+                dataset.pointBackgroundColor[pointIndex] = 'rgba(255,0,0,0.8)'; // Change to red color for highlighting
                 dataset.pointRadius = dataset.pointRadius || []; // Ensure array exists
                 dataset.pointRadius[pointIndex] = 20;  // Increase point size
             } else {
@@ -276,11 +408,12 @@ function highlightPoints(id) {
 
     });
 
-    chart.update();
+    chartId.update();
 }
 
-function resetPoints() {
-    chart.data.datasets.forEach((dataset, datasetIndex) => {
+function resetPoints(cellId) {
+    let chartId = cellId.includes('test') ? testChart : chart;
+    chartId.data.datasets.forEach((dataset, datasetIndex) => {
         dataset.data.forEach((point, pointIndex) => {
             dataset.pointBackgroundColor = dataset.pointBackgroundColor || [];
             dataset.pointBackgroundColor[pointIndex] = dataset.backgroundColor; // Set to default dataset color
@@ -288,5 +421,5 @@ function resetPoints() {
             dataset.pointRadius[pointIndex] = 6;  // Reset to default size        });
         });
     })
-    chart.update();
+    chartId.update();
 }
